@@ -6,7 +6,7 @@ from serial.tools import list_ports
 
 
 class MainWindow(QtWidgets.QMainWindow):
-	title = "DeploySystem switches v0.42"
+	title = "DeploySystem_switches v0.42"
 	def __init__(self):
 		QtWidgets.QMainWindow.__init__(self)
 		self.ui = uic.loadUi("gui/cool.ui", self)
@@ -22,19 +22,31 @@ class MainWindow(QtWidgets.QMainWindow):
 			readyRead=self.receive
 		)
 
-		self.line = ""
+		if len(QtSerialPort.QSerialPortInfo.availablePorts()) == 0:
+			print("No ports")
+			self.timer = QtCore.QTimer()
+			self.timer.timeout.connect(self.wait_port)
+			self.timer.start(100)
 
-		self.timer = QtCore.QTimer()
+
+		self.line = ""
 		
 
 		self.pushButton.clicked.connect(self.connect_by_click_buttom)
 		self.pushButton_2.clicked.connect(self.disconect_by_click_buttom)
+		self.pushButton_2.setEnabled(False)
 	
 	def update_comboBox(self):
-		print("ll")
+		print("updated portBox")
 		ports = serial.tools.list_ports.comports()
 		for p in ports:
 			self.comboBox.addItem(str(p.device))
+	
+
+	def wait_port(self):
+		if len(QtSerialPort.QSerialPortInfo.availablePorts()) > 0:
+			self.update_comboBox()
+			self.timer.stop()
 
 	def timer_read_port(self):
 		
@@ -48,15 +60,24 @@ class MainWindow(QtWidgets.QMainWindow):
 		if self.comboBox.currentText() == "":
 			self.alert(text_error="Open Error on port", text_information="No selected port to connect")
 			self.update_comboBox()
-		# if 
+			return
+		elif len(QtSerialPort.QSerialPortInfo.availablePorts()) == 0:
+			self.alert(text_error="No Success Conection", text_information="No selected port to connect")
+			return 
 		self.serial.setPortName(self.comboBox.currentText())
 		self.serial.setBaudRate(int(self.comboBox_2.currentText()))
 		self.serial.open(QtCore.QIODevice.ReadWrite)
+		
+		self.pushButton.setEnabled(False)
+		self.pushButton_2.setEnabled(True)
+
 		print("u clicked me c:")
 
 	
 	def disconect_by_click_buttom(self):
 		self.serial.close()
+		self.pushButton.setEnabled(True)
+		self.pushButton_2.setEnabled(False)
 	
 	@QtCore.pyqtSlot()
 	def receive(self):
