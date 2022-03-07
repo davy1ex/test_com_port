@@ -22,11 +22,16 @@ class MainWindow(QtWidgets.QMainWindow):
 			readyRead=self.receive
 		)
 
-		if len(QtSerialPort.QSerialPortInfo.availablePorts()) == 0:
-			print("No ports")
-			self.timer = QtCore.QTimer()
-			self.timer.timeout.connect(self.wait_port)
-			self.timer.start(100)
+		self.timer = QtCore.QTimer()
+		self.timer.timeout.connect(self.check_connection)
+		self.timer.start(100)
+		
+
+		# if len(QtSerialPort.QSerialPortInfo.availablePorts()) == 0:
+		# 	print("No ports")
+		# 	self.timer = QtCore.QTimer()
+		# 	self.timer.timeout.connect(self.wait_port)
+		# 	self.timer.start(100)
 
 
 		self.line = ""
@@ -36,14 +41,24 @@ class MainWindow(QtWidgets.QMainWindow):
 		self.pushButton_2.clicked.connect(self.disconect_by_click_buttom)
 		self.pushButton_2.setEnabled(False)
 	
-	def update_comboBox(self):
+	def check_connection(self):
+		if QtSerialPort.QSerialPortInfo.availablePorts() == 0:
+			self.timer.timeout.connect(self.wait_port)
+			self.timer.start(100)
+		else:
+			self.timer.stop()
+
+	def update_comboBox(self):		
 		print("updated portBox")
 		ports = serial.tools.list_ports.comports()
+		for p in ports:
+			print(p.device)
 		for p in ports:
 			self.comboBox.addItem(str(p.device))
 	
 
 	def wait_port(self):
+		print(self.serial)
 		if len(QtSerialPort.QSerialPortInfo.availablePorts()) > 0:
 			self.update_comboBox()
 			self.timer.stop()
@@ -55,13 +70,16 @@ class MainWindow(QtWidgets.QMainWindow):
 
 		self.textBrowser.setText("line")
 
-	
+	@QtCore.pyqtSlot()
 	def connect_by_click_buttom(self):
+		self.update_comboBox()
 		if self.comboBox.currentText() == "":
+			self.comboBox.clear()
 			self.alert(text_error="Open Error on port", text_information="No selected port to connect")
 			self.update_comboBox()
 			return
 		elif len(QtSerialPort.QSerialPortInfo.availablePorts()) == 0:
+			self.comboBox.clear()
 			self.alert(text_error="No Success Conection", text_information="No selected port to connect")
 			return 
 		self.serial.setPortName(self.comboBox.currentText())
@@ -73,11 +91,12 @@ class MainWindow(QtWidgets.QMainWindow):
 
 		print("u clicked me c:")
 
-	
+	@QtCore.pyqtSlot()
 	def disconect_by_click_buttom(self):
 		self.serial.close()
 		self.pushButton.setEnabled(True)
 		self.pushButton_2.setEnabled(False)
+		self.update_comboBox()
 	
 	@QtCore.pyqtSlot()
 	def receive(self):
